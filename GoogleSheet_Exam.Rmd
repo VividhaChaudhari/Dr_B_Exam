@@ -1,0 +1,383 @@
+---
+title: "Online exam with examinr"
+lang: en-US
+output:
+  examinr::exam_document:
+    id: Practice_1
+    version: 0.1
+    order: fixed
+runtime: shiny_prerendered
+---
+
+
+
+```{r setup, include=FALSE}
+# Set a CRAN mirror
+options(repos = c(CRAN = "https://cloud.r-project.org"))
+
+#Uncomment if the packages are not installed
+# install.packages("googlesheets4")
+# install.packages("dplyr")
+# install.packages("rsconnect")
+library(examinr)
+library(rsconnect)
+library(googlesheets4)
+library(base64enc)
+library(rlang)
+library(uuid)
+library(dplyr)
+library(shiny)
+
+knitr::opts_chunk$set(echo = FALSE)
+
+# # Define the Dummy Authentication Provider
+# dummy_auth_provider <- function(session) {
+#   return(list(
+#     user_id = "E-L",
+#     display_name = "Eager Learner",
+#     grading = TRUE
+#   ))
+# }
+
+
+```
+
+
+```{r,context='server-start'}
+
+
+# Function to serialize and base64 encode an R object
+serialize_object <- function(object) {
+  if (is.null(object)) return(NA_character_)
+  raw_obj <- serialize(object, NULL)
+  base64enc::base64encode(raw_obj)
+}
+
+# Function to base64 decode and unserialize a string back to an R object
+deserialize_object <- function(base64_string) {
+  if (is.null(base64_string) || !is.character(base64_string)) return(NULL)
+  raw_obj <- base64enc::base64decode(base64_string)
+  unserialize(raw_obj)
+}
+
+# Path to your service account JSON key file
+json_path <- "dr-b-dashboard-project.json"
+
+# Authenticate with Google Sheets using the service account key
+gs4_auth(path = json_path)
+
+
+# Google Sheets IDs
+sheet_id <- "1se2CvGntBc5vWgJR-CrXGLYXR69NhGrE7vewmxScB1A"
+
+# Function to safely read a sheet and handle empty google sheets
+safe_read_sheet <- function(sheet_id, sheet) {
+  data <- tryCatch(
+    {
+      read_sheet(sheet_id, sheet = sheet)
+    },
+    error = function(e) {
+      tibble()  # return an empty tibble if an error occurs
+    }
+  )
+  return(data)
+}
+
+# Create a new attempt
+create_attempt <- function(user, exam_id, exam_version, seed, started_at, ...) {
+  attempt_id <- UUIDgenerate()
+  user_obj_serialized <- serialize_object(user)
+  row <- data.frame(
+    attempt_id = attempt_id,
+    user_id = user$user_id,
+    exam_id = exam_id,
+    exam_version = exam_version,
+    user_obj = user_obj_serialized,
+    seed = seed,
+    started_at = format(started_at, "%Y-%m-%d %H:%M:%S"),
+    finished_at = NA,
+    points = NA
+  )
+  # Append the row to Google Sheets
+  sheet_append(sheet_id, row, sheet = "attempts")
+  return(attempt_id)
+}
+
+
+# Finish an attempt
+finish_attempt <- function(attempt_id, finished_at, ...) {
+  # Convert finished_at to POSIXct and format it
+  finished_at_formatted <- format(as.POSIXct(finished_at), "%Y-%m-%d %H:%M:%S")
+  
+  # Read the current attempts from Google Sheets
+  attempts <- read_sheet(sheet_id, sheet = "attempts")
+  
+  # Check if attempts is empty
+  if (nrow(attempts) == 0) {
+    warning("No attempts to finish.")
+    return(FALSE)
+  }
+  
+  
+  # Update the finished_at field for the specific attempt_id
+  attempts <- attempts %>% 
+    mutate(finished_at = ifelse(attempt_id == !!attempt_id, finished_at_formatted, finished_at))
+  
+  # Write the updated data back to Google Sheets
+  sheet_write(attempts, sheet_id, sheet = "attempts")
+  
+  return(TRUE)
+}
+
+
+# Grade an attempt
+grade_attempt <- function(attempt_id, points, ...) {
+  attempts <- read_sheet(sheet_id, sheet = "attempts")
+  
+  # Ensure points are serialized and base64 encoded
+  serialized_points <- tryCatch(
+    serialize_object(points),
+    error = function(e) {
+      warning("Failed to serialize points: ", e$message)
+      return(NA)
+    }
+  )
+  
+  if (is.na(serialized_points)) {
+    return(FALSE) # Do not proceed if serialization fails
+  }
+
+  # Ensure the data size does not exceed the limit
+  if (nchar(serialized_points) > 50000) {
+    warning("Serialized points data exceeds the maximum size limit.")
+    return(FALSE)
+  }
+  
+  # Check if attempts is empty
+  if (nrow(attempts) == 0) {
+    warning("No attempts to grade.")
+    return(FALSE)
+  }
+  
+  attempts <- attempts %>% 
+    mutate(points = ifelse(attempt_id == !!attempt_id, serialized_points, points))
+
+  sheet_write(attempts, sheet_id, sheet = "attempts")
+  return(TRUE)
+}
+
+# Get attempts
+get_attempts <- function(user, exam_id, exam_version, ...) {
+  attempts <- read_sheet(sheet_id, sheet = "attempts")
+  
+  # Check if attempts is empty
+  if (nrow(attempts) == 0) {
+    return(tibble())  # Return an empty tibble if no attempts
+  }
+  
+  attempts$user_obj <- lapply(attempts$user_obj, function(x) {
+    if (!is.na(x) && nchar(x) > 0) {
+      deserialize_object(x)
+    } else {
+      NULL
+    }
+  })
+
+  if (!is.null(user)) {
+    attempts <- attempts[attempts$user_id == user$user_id, , drop = FALSE]
+  }
+  if (!is.null(exam_id)) {
+    attempts <- attempts[attempts$exam_id == exam_id, , drop = FALSE]
+  }
+  if (!is.null(exam_version)) {
+    attempts <- attempts[attempts$exam_version == exam_version, , drop = FALSE]
+  }
+
+  return(attempts)
+}
+
+
+# Save section data
+save_section_data <- function(attempt_id, section, section_data, ...) {
+  # Read existing section data
+  existing_data <- read_sheet(sheet_id, sheet = "section_data")
+
+  # Determine the next ID
+  if (nrow(existing_data) == 0) {
+    next_id <- 1
+  } else {
+    existing_ids <- as.numeric(existing_data$id)
+    next_id <- max(existing_ids, na.rm = TRUE) + 1
+  }
+
+  # Create a new row with the next ID and other data
+  row <- tibble(
+    id = next_id,
+    attempt_id = attempt_id,
+    section = section,
+    timestamp = as.character(Sys.time()),
+    section_data = serialize_object(section_data)
+  )
+
+  # Append the new row to the Google Sheet
+  sheet_append(sheet_id, data = row, sheet = "section_data")
+  return(TRUE)
+}
+
+
+
+# Get section data
+get_section_data <- function(attempt_id, section, ...) {
+  section_data <- read_sheet(sheet_id, sheet = "section_data")
+  
+   # Check if section_data is empty
+  if (nrow(section_data) == 0) {
+    return(tibble())  # Return an empty tibble if no section data
+  }
+  
+  section_data <- section_data %>% filter(attempt_id == !!attempt_id)
+  if (!is.null(section)) {
+    section_data <- section_data %>% filter(section == section)
+  }
+  section_data <- section_data %>%
+    rowwise() %>%
+    mutate(section_data = list(deserialize_object(section_data))) %>%
+    ungroup()
+  return(split(section_data, seq(nrow(section_data))))
+}
+
+# Get the last section for an attempt
+get_last_section <- function(attempt_id, ...) {
+  section_data <- read_sheet(sheet_id, sheet = "section_data")
+  
+  # Check if section_data is empty
+  if (nrow(section_data) == 0) {
+    return(NULL)
+  }
+  
+  section_data <- section_data %>% filter(attempt_id == !!attempt_id)
+  if (nrow(section_data) > 0) {
+    last_section <- section_data$section[which.max(section_data$timestamp)]
+    return(last_section)
+  }
+  return(NULL)
+}
+
+# Combine all functions into a storage provider list
+google_sheets_storage_provider <- list(
+  create_attempt = create_attempt,
+  finish_attempt = finish_attempt,
+  grade_attempt = grade_attempt,
+  get_attempts = get_attempts,
+  save_section_data = save_section_data,
+  get_section_data = get_section_data,
+  get_last_section = get_last_section
+)
+
+# Use this Google Sheets storage provider for the exam
+exam_config(storage_provider = google_sheets_storage_provider)
+# exam_config(auth_provider = dummy_auth_provider,storage_provider = google_sheets_storage_provider)
+
+
+
+```
+
+
+# Welcome!
+
+This is your first practice Exam!
+
+# Uses mtcars dataset to answer the questions.
+
+Only submit the exam once you have completed it. Please click RUN button for code question to save your code responses.
+
+Use this chunk to find the solution
+```{r q-1, exercise=TRUE, exercise.solution="q-1-solution"}
+
+
+```
+
+```{r q-1-solution, echo =FALSE}
+ncol(mtcars)
+```
+
+Question 2: Use the above chunk to answer the question.
+```{r q-2}
+text_question(
+  title = "How many columns are there in the 'mtcars' dataset?",
+  points = 1,
+  type =   "numeric",
+  solution = 11
+)
+
+```
+
+Question 3: Use the mtcars dataset to generate a summary of the dataset. Display the summary in the console.
+
+```{r q-3, exercise=TRUE, exercise.points=1, exercise.solution="q-3-solution"}
+
+
+```
+
+```{r q-3-solution, echo =FALSE}
+summary(mtcars)
+```
+
+Question 4: Use the mtcars dataset to create side-by-side boxplots of the mileage (in column mpg) vs. the number of cylinders (in column cyl).
+
+```{r q-4, exercise=TRUE, exercise.points=1, exercise.solution="q-4-solution"}
+
+
+```
+
+```{r q-4-solution, echo}
+boxplot(mpg ~ cyl, data = mtcars)
+```
+
+Question 5: Use the mtcars dataset to calculate the mean miles per gallon (mpg) for each number of cylinders (in column cyl).
+
+```{r q-5, exercise=TRUE, exercise.points=1,  exercise.solution="q-5-solution"}
+
+
+```
+
+```{r q-5-solution, echo =FALSE}
+aggregate(mpg ~ cyl, data = mtcars, FUN = mean)
+
+
+```
+
+Question 6: Use the mtcars dataset to filter out the cars that have more than 200 horsepower (in column hp). Show the first few rows of the resulting data frame.
+
+```{r q-6, exercise=TRUE, exercise.points=1, exercise.solution="q-6-solution"}
+
+
+```
+
+```{r q-6-solution, echo =FALSE}
+high_hp_cars <- mtcars[mtcars$hp > 200, ]
+head(high_hp_cars)
+```
+
+Question 7 : Describe the purpose of the mpg ~ cyl formula in this function.
+```{r q-7}
+text_question(
+  title = "Understanding Boxplots in R",
+  points = 1,
+  type = "textarea",
+  solution = NULL,
+  # solution_quoted = FALSE,
+  # comp = comp_digits(3, 1),
+  # label = "Type your answer below.",
+  # hide_label = FALSE,
+  # mandatory = FALSE,
+  # id = NULL,
+  # title_container = h6,
+  # static_title = NULL
+)
+```
+
+# Done!
+
+You have successfully submitted the exam.
+

@@ -1,0 +1,12 @@
+ncol(mtcars)
+
+11
+
+summary(mtcars)
+
+boxplot(mpg ~ cyl, data = mtcars)
+
+aggregate(mpg ~ cyl, data = mtcars, FUN = mean)
+
+high_hp_cars <- mtcars[mtcars$hp > 200, ]
+head(high_hp_cars)

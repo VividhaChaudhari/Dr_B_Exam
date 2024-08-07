@@ -1,0 +1,78 @@
+---
+title: "Decoding Data"
+author: "Vividha C"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r}
+# Install and load necessary packages
+#install.packages("googlesheets4")
+#install.packages("base64enc")
+#install.packages("openxlsx")
+
+library(googlesheets4)
+library(base64enc)
+library(openssl) 
+library(openxlsx)
+
+# Path to your service account JSON key file
+json_path <- "dr-b-dashboard-project.json"
+
+# Authenticate with Google Sheets using the service account key
+gs4_auth(path = json_path)
+
+# Replace 'YOUR_SHEET_ID' with the actual ID of your Google Sheet
+sheet_id <- "1se2CvGntBc5vWgJR-CrXGLYXR69NhGrE7vewmxScB1A"
+
+# # Read the data from the Google Sheet
+data <- read_sheet(sheet_id, sheet = "section_data")
+# 
+# Function to decode base64 encoded data
+decode_data <- function(encoded_data) {
+  tryCatch({
+    raw_data <- base64decode(encoded_data)
+    unserialized_data <- unserialize(raw_data)
+    return(unserialized_data)
+  }, error = function(e) {
+    warning("Deserialization error: ", e$message)
+    return(NA)
+  })
+}
+
+
+# Decode the section_data column
+if ("section_data" %in% colnames(data)) {
+  data$decoded_section_data <- sapply(data$section_data, function(x) {
+    decoded <- decode_data(x)
+    if (is.list(decoded)) {
+      # Convert list to string
+      return(paste(unlist(decoded), collapse = ", "))
+    } else {
+      return(decoded)
+    }
+  })
+} else {
+  stop("The column 'section_data' does not exist in the data.")
+}
+
+# Create a new sheet name
+new_sheet_name <- "Decoded_Data"
+
+# Write the updated data to a new sheet in the same Google Sheet
+sheet_write(data, ss = sheet_id, sheet = new_sheet_name)
+
+# Optional: Print a message to indicate success
+print("Data successfully decoded and written to a new sheet in the same Google Sheets document")
+
+
+
+
+#write.xlsx(data, file = "test.xlsx")
+
+
+
+
+
+
+```
