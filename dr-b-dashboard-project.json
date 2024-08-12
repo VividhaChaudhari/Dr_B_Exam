@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "dr-b-dashboard-project-431802",
+  "private_key_id": "d95de95edab9c311855d8ed5bfd8d456dca86ef9",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQCmt0WcaVRcaHSV\noLnMorp1cDYxbBzKtVCWlMUP1CkjvMqPqY+MJ+s2/1xPfFvcDzUBxCRyKzY8pnSH\njpDVOlGa6xhguHGmhLIzvQwHofuvG6pCYv18dczVNoK1FykqLFmCXO7WqVnsEPdd\ntbe/UVWZy1jvSLwyZ1LvQKMp1sNpn0pfu35VYuGSX9uzrzofkuuHO+B7pNFfc3a/\n936PNKSzbo/68jw6AzyxolpOs3X2ozeOwl6ERrFCBw6K7N1O/Aj1EKuWZRPQKkCl\nhTFdB7GqIyaL8PePr01OU0YJpa7Gl/PB+7aAJhSkaWQOCeHX5uXrvIvyFvudz6Vb\nrDGa0Q0xAgMBAAECggEATag+KTsZHEhd0hsBoTRF1ZF09PWOvc/Sn6nh11s05Jw6\n4MuTfa5UjxRJLA9Z/Loqr01tyq6dP4gr7L74cRKO07Jh8x/HdNEH7zjGw0FtauZg\nmzbgK9r1lHWlUfRdbPMmqKZgbKaLJ/7JMyID2v7oeFCz9xYy7+mYRLEfr8wFz4su\nWg4Lv7t9q1pg1+uFFjWgd+0mMgSvMvvTf2OuQSEMpB0S60PwCggfslEZezGJc+7J\nrMsm8AxXC4LAGQl8z9ZcNzscqJW9Ug6/QHb6G8pluLbE1JauwUAIlEinMZHju0Ta\nDvy3BHGE8l0nOx/kfVESooM91A0vI9bEVHrdHSIZBwKBgQDYzgeBqS5OEFU4Kx90\nitQnESFOqqPGk+MTbv63/SS9T6sW9PMsf+VdjGGjB6lIvbb+yU//nrZXA6nuaoKZ\nCkoggFqoAWotKKW4Yjh4UhuClt5gjI2QI5UxlP5iSEQoPKnWvTK+DbTkftVBANeU\ntDbk3vkUVgX0GW8kLcmXKWz/swKBgQDE2xJvRIH7n8tVBsl7vuDVZWxcOq8X8Eou\nd3c2bExGl98jMxAyB5v33y2KAyKKZNmkVheTJtQwd2Xaso8w49liVeYFGA1hTLGf\n8EtYz/t87tyGItkPKVO1SanK731ysCXpBw88WsXOhgYavSKsW/1jsThYxsenzf0w\nbwd987FtiwKBgQCQi5x5mAAlT8Jhdm68VqrneQZJ2n7isEqe9EujA4VxKiKZZaqT\nKpoTarrV5Q+6TbIp4LITbQ+IqAqtyBlWS4Psc2b9yCOwA/+pFOMtZSCuSkPs/wiK\n5w5bRkjr4d5/LSLW5sFj8ON/zAgGFLemjxhiMz7BjjDd8+8jodtbiuT+/QKBgH2P\nIaX4s1OUK3PzHUYhjHRv+XqmL5H8QMR8jHwY/Vm1eqyP4E+YzOF/5yL1Nu3Av5Tz\nGJxSEttK/JtOcsiDO99d3JX5LmeWLGFQOi7OkaCxFdU0mu/xsyOZdYQr1v703WlR\niGU9nJdKotAhPOFk1yzkF4WAXE5qs4hV+Rhb/BpbAoGAXhsrOnusdiVzGOuEhuoG\nXescLmxP2q99AWTmrRDDA1cJry0vcgSxHMPhxmUgkdeeFKfbumny5mltKzisUIBk\ng8XkC5CNrQAAbImh5pHhGqerXFGk/bkch90vhgm65dXDzLuV7OppXR9HOmcNfsVW\nObjiagKIB+gxkfZ9aeDoPr4=\n-----END PRIVATE KEY-----\n",
+  "client_email": "dr-b-dashboard@dr-b-dashboard-project-431802.iam.gserviceaccount.com",
+  "client_id": "104189801792527847451",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/dr-b-dashboard%40dr-b-dashboard-project-431802.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}
