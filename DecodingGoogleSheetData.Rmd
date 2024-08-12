@@ -10,10 +10,12 @@ output: html_document
 #install.packages("googlesheets4")
 #install.packages("base64enc")
 #install.packages("openxlsx")
+#install.packages("dplyr")
 
 library(googlesheets4)
 library(base64enc)
 library(openssl) 
+library(dplyr)
 library(openxlsx)
 
 # Path to your service account JSON key file
@@ -27,7 +29,7 @@ sheet_id <- "1se2CvGntBc5vWgJR-CrXGLYXR69NhGrE7vewmxScB1A"
 
 # # Read the data from the Google Sheet
 data <- read_sheet(sheet_id, sheet = "section_data")
-# 
+
 # Function to decode base64 encoded data
 decode_data <- function(encoded_data) {
   tryCatch({
@@ -56,6 +58,15 @@ if ("section_data" %in% colnames(data)) {
   stop("The column 'section_data' does not exist in the data.")
 }
 
+# Read the data from the 'attempts' sheet to get 'user_id'
+attempts_data <- read_sheet(sheet_id, sheet = "attempts")
+
+
+# Join 'section_data' with 'attempts' to add 'user_id'
+data <- data %>%
+  left_join(attempts_data %>% select(attempt_id, user_id), by = "attempt_id")
+
+
 # Create a new sheet name
 new_sheet_name <- "Decoded_Data"
 
@@ -68,7 +79,7 @@ print("Data successfully decoded and written to a new sheet in the same Google S
 
 
 
-#write.xlsx(data, file = "test.xlsx")
+write.xlsx(data, file = "test.xlsx")
 
 
 

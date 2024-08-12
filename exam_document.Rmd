@@ -3,7 +3,7 @@ title: "Online exam with examinr"
 lang: en-US
 output:
   examinr::exam_document:
-    id: Practice_1
+    id: Demo_Test
     version: 0.1
     order: fixed
 runtime: shiny_prerendered
@@ -16,9 +16,9 @@ runtime: shiny_prerendered
 options(repos = c(CRAN = "https://cloud.r-project.org"))
 
 #Uncomment if the packages are not installed
-# install.packages("googlesheets4")
-# install.packages("dplyr")
-# install.packages("rsconnect")
+#install.packages("googlesheets4")
+#install.packages("dplyr") # for data manipulation
+#install.packages("rsconnect")
 library(examinr)
 library(rsconnect)
 library(googlesheets4)
@@ -30,21 +30,44 @@ library(shiny)
 
 knitr::opts_chunk$set(echo = FALSE)
 
-# # Define the Dummy Authentication Provider
-# dummy_auth_provider <- function(session) {
-#   return(list(
-#     user_id = "E-L",
-#     display_name = "Eager Learner",
-#     grading = TRUE
-#   ))
-# }
-
 
 ```
 
 
 ```{r,context='server-start'}
 
+# Path to your service account JSON key file
+json_path <- "dr-b-dashboard-project.json"
+
+# Authenticate with Google Sheets using the service account key
+gs4_auth(path = json_path)
+
+
+# Google Sheets IDs
+sheet_id <- "1se2CvGntBc5vWgJR-CrXGLYXR69NhGrE7vewmxScB1A"
+
+# Function to read user data from Google Sheets
+get_user_data <- function(sheet_id) {
+  users <- read_sheet(sheet_id, sheet = "users")
+  return(users)
+}
+
+# Get user data
+users <- get_user_data(sheet_id)
+
+# Set up token-based authentication
+
+auth_provider <- ui_token_auth(
+  users = users,
+  token_label = "Enter your Z-ID",
+  title = "Login",
+  button_label = "Login",
+  token_empty = "Login cannot be empty.",
+  unauthorized = "The ZID is incorrect."
+)
+
+# Use the ZID field instead of user_id for identifying users
+users$ZID <- users$ZID  # Ensure that the ZID field is used properly
 
 # Function to serialize and base64 encode an R object
 serialize_object <- function(object) {
@@ -60,28 +83,7 @@ deserialize_object <- function(base64_string) {
   unserialize(raw_obj)
 }
 
-# Path to your service account JSON key file
-json_path <- "dr-b-dashboard-project.json"
 
-# Authenticate with Google Sheets using the service account key
-gs4_auth(path = json_path)
-
-
-# Google Sheets IDs
-sheet_id <- "1se2CvGntBc5vWgJR-CrXGLYXR69NhGrE7vewmxScB1A"
-
-# Function to safely read a sheet and handle empty google sheets
-safe_read_sheet <- function(sheet_id, sheet) {
-  data <- tryCatch(
-    {
-      read_sheet(sheet_id, sheet = sheet)
-    },
-    error = function(e) {
-      tibble()  # return an empty tibble if an error occurs
-    }
-  )
-  return(data)
-}
 
 # Create a new attempt
 create_attempt <- function(user, exam_id, exam_version, seed, started_at, ...) {
@@ -111,13 +113,6 @@ finish_attempt <- function(attempt_id, finished_at, ...) {
   
   # Read the current attempts from Google Sheets
   attempts <- read_sheet(sheet_id, sheet = "attempts")
-  
-  # Check if attempts is empty
-  if (nrow(attempts) == 0) {
-    warning("No attempts to finish.")
-    return(FALSE)
-  }
-  
   
   # Update the finished_at field for the specific attempt_id
   attempts <- attempts %>% 
@@ -152,13 +147,7 @@ grade_attempt <- function(attempt_id, points, ...) {
     warning("Serialized points data exceeds the maximum size limit.")
     return(FALSE)
   }
-  
-  # Check if attempts is empty
-  if (nrow(attempts) == 0) {
-    warning("No attempts to grade.")
-    return(FALSE)
-  }
-  
+
   attempts <- attempts %>% 
     mutate(points = ifelse(attempt_id == !!attempt_id, serialized_points, points))
 
@@ -169,12 +158,6 @@ grade_attempt <- function(attempt_id, points, ...) {
 # Get attempts
 get_attempts <- function(user, exam_id, exam_version, ...) {
   attempts <- read_sheet(sheet_id, sheet = "attempts")
-  
-  # Check if attempts is empty
-  if (nrow(attempts) == 0) {
-    return(tibble())  # Return an empty tibble if no attempts
-  }
-  
   attempts$user_obj <- lapply(attempts$user_obj, function(x) {
     if (!is.na(x) && nchar(x) > 0) {
       deserialize_object(x)
@@ -229,13 +212,8 @@ save_section_data <- function(attempt_id, section, section_data, ...) {
 # Get section data
 get_section_data <- function(attempt_id, section, ...) {
   section_data <- read_sheet(sheet_id, sheet = "section_data")
-  
-   # Check if section_data is empty
-  if (nrow(section_data) == 0) {
-    return(tibble())  # Return an empty tibble if no section data
-  }
-  
   section_data <- section_data %>% filter(attempt_id == !!attempt_id)
+  
   if (!is.null(section)) {
     section_data <- section_data %>% filter(section == section)
   }
@@ -249,12 +227,6 @@ get_section_data <- function(attempt_id, section, ...) {
 # Get the last section for an attempt
 get_last_section <- function(attempt_id, ...) {
   section_data <- read_sheet(sheet_id, sheet = "section_data")
-  
-  # Check if section_data is empty
-  if (nrow(section_data) == 0) {
-    return(NULL)
-  }
-  
   section_data <- section_data %>% filter(attempt_id == !!attempt_id)
   if (nrow(section_data) > 0) {
     last_section <- section_data$section[which.max(section_data$timestamp)]
@@ -275,8 +247,8 @@ google_sheets_storage_provider <- list(
 )
 
 # Use this Google Sheets storage provider for the exam
-exam_config(storage_provider = google_sheets_storage_provider)
-# exam_config(auth_provider = dummy_auth_provider,storage_provider = google_sheets_storage_provider)
+exam_config(auth_provider = auth_provider, storage_provider = google_sheets_storage_provider)
+
 
 
 
@@ -289,7 +261,7 @@ This is your first practice Exam!
 
 # Uses mtcars dataset to answer the questions.
 
-Only submit the exam once you have completed it. Please click RUN button for code question to save your code responses.
+Only submit the exam once you have completed it.
 
 Use this chunk to find the solution
 ```{r q-1, exercise=TRUE, exercise.solution="q-1-solution"}
