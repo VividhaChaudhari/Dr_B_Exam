@@ -76,14 +76,7 @@ sheet_write(data, ss = sheet_id, sheet = new_sheet_name)
 # Optional: Print a message to indicate success
 print("Data successfully decoded and written to a new sheet in the same Google Sheets document")
 
-
-
-
+#Storing in Excel
 write.xlsx(data, file = "test.xlsx")
-
-
-
-
-
 
 ```

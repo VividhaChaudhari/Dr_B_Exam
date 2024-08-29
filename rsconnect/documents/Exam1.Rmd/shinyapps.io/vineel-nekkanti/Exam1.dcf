@@ -1,0 +1,13 @@
+name: Exam1
+title: Exam1
+username: vineel-nekkanti
+account: vineel-nekkanti
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 12487707
+bundleId: 9008372
+url: https://vineel-nekkanti.shinyapps.io/Exam1/
+version: 1
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: .RData|Answers for Exam.txt|Challenges in ExaminR.docx|DecodingGoogleSheetData.Rmd|exam_document.html|Exam1.html|README Online Exam with examinr.docx|test.xlsx|Week1_activities.html|Week1_activities.Rmd

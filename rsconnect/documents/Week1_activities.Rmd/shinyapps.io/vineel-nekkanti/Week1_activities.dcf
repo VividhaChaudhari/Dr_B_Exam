@@ -1,0 +1,13 @@
+name: Week1_activities
+title: Week1_activities
+username: vineel-nekkanti
+account: vineel-nekkanti
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 12486473
+bundleId: 9036529
+url: https://vineel-nekkanti.shinyapps.io/Week1_activities/
+version: 1
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: .RData|Challenges in ExaminR.docx|decoded_data.xlsx|decoded_data_by_exam.xlsx|Decoding_Each_Exam.Rmd|DecodingFullExamData.Rmd|exam_document.html|Exam1.html|Exam1.Rmd|ExaminR Test Cases.xlsx|README Online Exam with examinr.docx|test.xlsx|Week1_activities.html

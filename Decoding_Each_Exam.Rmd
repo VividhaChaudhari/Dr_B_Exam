@@ -1,0 +1,129 @@
+---
+title: "Decoding Questions"
+author: "Vividha C"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r}
+# Load required libraries
+library(googlesheets4)
+library(base64enc)
+library(openssl)
+library(dplyr)
+library(openxlsx)
+
+# Path to your service account JSON key file
+json_path <- "dr-b-dashboard-project.json"
+
+# Authenticate with Google Sheets using the service account key
+gs4_auth(path = json_path)
+
+# Replace with the actual ID of your Google Sheet
+sheet_id <- "1se2CvGntBc5vWgJR-CrXGLYXR69NhGrE7vewmxScB1A"
+
+# Read the data from the Google Sheet
+data <- read_sheet(sheet_id, sheet = "section_data")
+
+# Function to decode base64 encoded data
+decode_data <- function(encoded_data) {
+  tryCatch({
+    raw_data <- base64decode(encoded_data)
+    unserialized_data <- unserialize(raw_data)
+    return(unserialized_data)
+  }, error = function(e) {
+    warning("Deserialization error: ", e$message)
+    return(NA)
+  })
+}
+
+# Check if 'section_data' column exists
+if ("section_data" %in% colnames(data)) {
+  
+  # Decode the section_data column
+  decoded_data <- lapply(data$section_data, decode_data)
+  
+  # Find all unique question IDs from the decoded data
+  all_questions <- unique(unlist(lapply(decoded_data, function(x) {
+    if (is.list(x)) names(x) else character(0)
+  })))
+  
+  # Function to standardize each row of data
+  standardize_data <- function(row, all_questions) {
+    if (is.list(row)) {
+      row <- as.list(row)
+      missing_questions <- setdiff(all_questions, names(row))
+      row[missing_questions] <- NA
+      return(row[all_questions])
+    } else {
+      return(setNames(rep(NA, length(all_questions)), all_questions))
+    }
+  }
+  
+  # Apply the standardization function
+  standardized_data <- lapply(decoded_data, standardize_data, all_questions)
+  
+  # Convert standardized data to a data frame
+  decoded_df <- do.call(rbind, lapply(standardized_data, function(x) {
+    as.data.frame(t(x), stringsAsFactors = FALSE)
+  }))
+  
+  # Merge the decoded data with the original data frame
+  final_data <- cbind(data, decoded_df)
+  
+  # Read the data from the 'attempts' sheet to get 'user_id'
+  attempts_data <- read_sheet(sheet_id, sheet = "attempts")
+  
+  # Join with attempts_data to get user_id
+  final_data <- final_data %>%
+    left_join(attempts_data %>% select(attempt_id, user_id, test_id, test_version_id), by = "attempt_id") %>%
+    relocate(user_id, .before = all_questions[1]) %>% #Place user_id before question columns
+    relocate(test_id,test_version_id,  .before = saved_at)
+  
+  # Handle null values
+  final_data[is.na(final_data)] <- ""
+  
+  # Write the updated data back to Google Sheets
+  sheet_write(final_data, ss = sheet_id, sheet = "Decoded_Data")
+  
+  # Write the final data to an Excel file
+  write.xlsx(final_data, file = "decoded_data.xlsx")
+  
+  # Split data by `test_id`
+  split_data <- split(final_data, final_data$test_id)
+
+     # Ensure valid sheet names (replace invalid characters)
+    sanitize_sheet_name <- function(name) {
+      gsub("[^[:alnum:]_]", "_", name)
+    }
+    
+    # Write each `test_id` data to a separate sheet in Google Sheets
+    for (test_id in names(split_data)) {
+      data <- split_data[[test_id]]
+      # Check if data is not NULL and not empty
+      if (!is.null(data) && nrow(data) > 0) {
+        sanitized_name <- sanitize_sheet_name(test_id)
+        tryCatch({
+          sheet_write(data, ss = sheet_id, sheet = sanitized_name)
+          message("Successfully wrote data for test_id: ", test_id)
+        }, error = function(e) {
+          warning("Failed to write data for test_id: ", test_id, " with error: ", e$message)
+        })
+      } else {
+        message("No data to write for test_id: ", test_id)
+      }
+    }
+    
+  # Also create a list of data frames for Excel
+  excel_data <- split_data
+  
+  # Write each data frame to a separate sheet in an Excel file
+  write.xlsx(excel_data, file = "decoded_data_by_exam.xlsx")
+
+} else {
+  stop("The column 'section_data' does not exist in the data.")
+}
+
+
+```
+

@@ -1,9 +1,9 @@
 ---
-title: "Online exam with examinr"
+title: "OMIS 482 - Fall 2024"
 lang: en-US
 output:
   examinr::exam_document:
-    id: Demo_Test
+    id: Exam1
     version: 0.1
     order: fixed
 runtime: shiny_prerendered
@@ -27,6 +27,10 @@ library(rlang)
 library(uuid)
 library(dplyr)
 library(shiny)
+library(tidyverse)
+library(nycflights13)
+set.seed(0101)
+flights <- sample_n(flights, 15000)
 
 knitr::opts_chunk$set(echo = FALSE)
 
@@ -59,11 +63,11 @@ users <- get_user_data(sheet_id)
 
 auth_provider <- ui_token_auth(
   users = users,
-  token_label = "Enter your Z-ID",
+  token_label = "Enter your Token-ID",
   title = "Login",
   button_label = "Login",
   token_empty = "Login cannot be empty.",
-  unauthorized = "The ZID is incorrect."
+  unauthorized = "The Token-ID is incorrect."
 )
 
 # Use the ZID field instead of user_id for identifying users
@@ -255,101 +259,200 @@ exam_config(auth_provider = auth_provider, storage_provider = google_sheets_stor
 ```
 
 
-# Welcome!
+# Manipulation Review
 
-This is your first practice Exam!
+# Use 'flights' dataset to answer the questions.
 
-# Uses mtcars dataset to answer the questions.
+Only submit the Exam once you have completed it.
 
-Only submit the exam once you have completed it.
+1. Write the code to show just the column names in the `flights` dataset.
 
-Use this chunk to find the solution
-```{r q-1, exercise=TRUE, exercise.solution="q-1-solution"}
+```{r q-1, exercise=TRUE, exercise.autocomplete=TRUE,exercise.points=1, exercise.solution="q-1-solution"}
 
 
 ```
 
 ```{r q-1-solution, echo =FALSE}
-ncol(mtcars)
+colnames(flights)
 ```
 
-Question 2: Use the above chunk to answer the question.
-```{r q-2}
-text_question(
-  title = "How many columns are there in the 'mtcars' dataset?",
-  points = 1,
-  type =   "numeric",
-  solution = 11
-)
+2. Print the `flights` dataset in console
+
+```{r q-2, exercise=TRUE,exercise.autocomplete=TRUE, exercise.points=1,  exercise.solution="q-2-solution"}
+
 
 ```
 
-Question 3: Use the mtcars dataset to generate a summary of the dataset. Display the summary in the console.
+```{r q-2-solution, echo =FALSE}
+flights
+print(flights)
+glimpse(flights)
+```
 
-```{r q-3, exercise=TRUE, exercise.points=1, exercise.solution="q-3-solution"}
+
+3. Write the code to manipulate `flights` and only keep the observations that represent flights departed by `JFK` in the month of `August`
+
+```{r q-3, exercise=TRUE, exercise.autocomplete=TRUE, exercise.points=1, exercise.solution="q-3-solution"}
 
 
 ```
 
 ```{r q-3-solution, echo =FALSE}
-summary(mtcars)
+filter(flights, origin=="JFK" & month==8)#or
+filter(flights, origin=="JFK" , month==8)#or
+flights |> 
+  filter(origin=="JFK" & month==8)
+flights |> 
+  filter(origin=="JFK" , month==8)
 ```
 
-Question 4: Use the mtcars dataset to create side-by-side boxplots of the mileage (in column mpg) vs. the number of cylinders (in column cyl).
+4. Write the code to create a column called `delay` that is equal to `arr_time`- `sched_arr_time`.  Make sure to show just the new computed column.
 
-```{r q-4, exercise=TRUE, exercise.points=1, exercise.solution="q-4-solution"}
-
-
-```
-
-```{r q-4-solution, echo}
-boxplot(mpg ~ cyl, data = mtcars)
-```
-
-Question 5: Use the mtcars dataset to calculate the mean miles per gallon (mpg) for each number of cylinders (in column cyl).
-
-```{r q-5, exercise=TRUE, exercise.points=1,  exercise.solution="q-5-solution"}
+```{r q-4, exercise=TRUE, exercise.autocomplete=TRUE, exercise.points=1, exercise.solution="q-4-solution"}
 
 
 ```
 
-```{r q-5-solution, echo =FALSE}
-aggregate(mpg ~ cyl, data = mtcars, FUN = mean)
+```{r q-4-solution, echo = FALSE}
+transmute(flights, delay=arr_time-sched_arr_time)#or
+flights |> 
+  transmute( delay=arr_time-sched_arr_time)
+mutate(flights, delay=arr_time-sched_arr_time)#partially correct
+flights |> 
+  mutate( delay=arr_time-sched_arr_time)#partially correct
+```
+
+5. Write the code to compute the `average distance` of all the observations in the `flights` dataset.
+
+```{r q-5, exercise=TRUE, exercise.autocomplete=TRUE, exercise.points=1, exercise.solution="q-5-solution"}
 
 
 ```
 
-Question 6: Use the mtcars dataset to filter out the cars that have more than 200 horsepower (in column hp). Show the first few rows of the resulting data frame.
+```{r q-5-solution, echo = FALSE}
+summarise(flights, avg_distance= mean(distance))#or
+summarise(flights, mean(distance, na.rm=T))#or
+flights |> 
+summarise( avg_distance= mean(distance))
+```
 
-```{r q-6, exercise=TRUE, exercise.points=1, exercise.solution="q-6-solution"}
+6. Write the code to sort the `flights` dataset from the `largest air_time` to the `smallest air_time`.
+
+```{r q-6, exercise=TRUE, exercise.autocomplete=TRUE,exercise.points=1, exercise.solution="q-6-solution"}
 
 
 ```
 
-```{r q-6-solution, echo =FALSE}
-high_hp_cars <- mtcars[mtcars$hp > 200, ]
-head(high_hp_cars)
+```{r q-6-solution, echo = FALSE}
+arrange(flights, desc(air_time))#or
+flights |> 
+  arrange(desc(air_time))
 ```
 
-Question 7 : Describe the purpose of the mpg ~ cyl formula in this function.
-```{r q-7}
-text_question(
-  title = "Understanding Boxplots in R",
-  points = 1,
-  type = "textarea",
-  solution = NULL,
-  # solution_quoted = FALSE,
-  # comp = comp_digits(3, 1),
-  # label = "Type your answer below.",
-  # hide_label = FALSE,
-  # mandatory = FALSE,
-  # id = NULL,
-  # title_container = h6,
-  # static_title = NULL
-)
+7. Write the code to keep in the `flights` dataset only the columns that `end with` the word `time`.
+
+```{r q-7, exercise=TRUE, exercise.autocomplete=TRUE,exercise.points=1, exercise.solution="q-7-solution"}
+
+
+```
+
+```{r q-7-solution, echo = FALSE}
+select(flights, ends_with("time"))#or
+flights |> 
+  select( ends_with("time"))#or
+select(flights, 4,5,7,8,15)
+```
+
+## Working with Pipes.[pipes are mandatory in this section]
+
+8. Write the code to compute the `max air time` of the flights per each `dest`. Sort the data from the `largest max air time` to the `smallest max air time`.
+
+```{r q-8, exercise=TRUE,exercise.autocomplete=TRUE, exercise.points=1,  exercise.solution="q-8-solution"}
+
+
+```
+
+```{r q-8-solution, echo = FALSE}
+flights |> 
+  group_by(dest) |> 
+  summarise(max_air_time= max(air_time, na.rm = T)) |> 
+  arrange(desc(max_air_time))
+
+flights |> 
+  group_by(dest) |> 
+  summarise(max_air_time= max(air_time)) |> 
+  arrange(desc(max_air_time))
+```
+
+9. Write the code to compute the `median arr_delay` of the flights per each `day of the year`. Sort the data from the `largest median arr_delay` to the `smallest median arr_delay`.
+
+```{r q-9, exercise=TRUE, exercise.autocomplete=TRUE,exercise.points=1, exercise.solution="q-9-solution"}
+
+
+```
+
+```{r q-9-solution, echo = FALSE}
+flights |> 
+  group_by(year,month, day) |> 
+  summarise(median_arr_delay= median(arr_delay, na.rm=T)) |> 
+  arrange(desc(median_arr_delay))
+```
+
+10. Write the code to compute for each `carrier` the following:
+     - `average distance`
+     - `average arr_delay` (hint: exclude `NAs` if needed) 
+     - `median distance`
+     - `median arr_delay`
+     - `sd distance` (hint: `sd` stands for standard deviation sd function) 
+     - `sd arr_delay`
+     - `number of flights` operated by each `carrier`
+
+```{r q-10, exercise=TRUE, exercise.autocomplete=TRUE, exercise.points=1, exercise.solution="q-10-solution"}
+
+
+```
+
+```{r q-10-solution, echo = FALSE}
+flights |> 
+  group_by(carrier) |> 
+  summarise(avg_distance= mean(distance),
+            avg_arr_delay=mean(arr_delay, na.rm=T),
+            median_distance=median(distance), 
+            median_arr_delay= median(arr_delay, na.rm=T), 
+            sd_distance=sd(distance), 
+            sd_arr_delay=sd(arr_delay, na.rm = T), 
+            number_flights=n())
+```
+
+
+11. Write the code to compute for each `destination` the following:
+     - `average dep_delay`
+     - `max dep_delay`
+     - `median dep_delay`
+     - `min dep_delay`
+     - `sd dep_delay` 
+     - `number of flights` landed at each `destination`
+     - order the data from the `largest average dep_delay` to the `smallest average dep_delay` 
+     - make sure only the observations with `sd smaller than 20` are kept in the dataset
+     
+```{r q-11, exercise=TRUE, exercise.autocomplete=TRUE, exercise.points=1, exercise.solution="q-11-solution"}
+
+
+```
+
+```{r q-11-solution, echo = FALSE}
+flights |> 
+  group_by(dest) |> 
+  summarise(avg_dep_delay= mean(dep_delay,na.rm=T), 
+            max_dep_delay=max(dep_delay, na.rm=T), 
+            median_dep_delay= median(dep_delay, na.rm=T), 
+            min_dep_delay=min(dep_delay, na.rm=T), 
+            sd_dep_delay=sd(dep_delay, na.rm = T), number_flights=n()) |> 
+  arrange(desc(avg_dep_delay)) |> 
+  filter(sd_dep_delay<20)
 ```
 
 # Done!
 
-You have successfully submitted the exam.
+You have successfully submitted the Test.
 
